@@ -1,7 +1,7 @@
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
-LOCAL_SRC_FILES := mkfs/f2fs_format.c mkfs/f2fs_format_utils.c lib/libf2fs.c
+LOCAL_SRC_FILES := mkfs/f2fs_format_main.c mkfs/f2fs_format.c mkfs/f2fs_format_utils.c lib/libf2fs.c
 LOCAL_MODULE := libmake_f2fs
 LOCAL_MODULE_TAGS := optional
 include $(BUILD_STATIC_LIBRARY)
