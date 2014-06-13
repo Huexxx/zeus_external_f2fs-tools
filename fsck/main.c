@@ -209,6 +209,9 @@ int fsck_f2fs_main (int argc, char **argv)
 	}
 
 	f2fs_do_umount(sbi);
+
+	f2fs_finalize_device(&config);
+
 	printf("\nDone.\n");
 	return ret;
 }

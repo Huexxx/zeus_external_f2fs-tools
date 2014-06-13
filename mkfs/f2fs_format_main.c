@@ -167,6 +167,8 @@ int make_f2fs_main(int argc, char *argv[])
 	if (f2fs_format_device() < 0)
 		return -1;
 
+	f2fs_finalize_device(&config);
+
 	MSG(0, "Info: format successful\n");
 
 	return 0;
