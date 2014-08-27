@@ -11,9 +11,7 @@
 #include "fsck.h"
 #include <libgen.h>
 
-struct f2fs_fsck gfsck = {
-	.sbi = { .fsck = &gfsck, },
-};
+struct f2fs_fsck gfsck;
 
 void fsck_usage()
 {
@@ -42,7 +40,7 @@ void f2fs_parse_options(int argc, char *argv[])
 	char *prog = basename(argv[0]);
 
 	if (!strcmp("fsck.f2fs", prog)) {
-		const char *option_string = "d:t";
+		const char *option_string = "d:tf";
 
 		MSG(0, "\n\tF2FS-tools: fsck.f2fs Ver: %s (%s)\n\n",
 					F2FS_TOOLS_VERSION,
@@ -52,10 +50,15 @@ void f2fs_parse_options(int argc, char *argv[])
 			switch (option) {
 				case 'd':
 					config.dbg_lv = atoi(optarg);
-					MSG(0, "Info: Debug level = %d\n", config.dbg_lv);
+					MSG(0, "Info: Debug level = %d\n",
+								config.dbg_lv);
 					break;
 				case 't':
 					config.dbg_lv = -1;
+					break;
+				case 'f':
+					config.fix_on = 1;
+					MSG(0, "Info: Force to fix corruption\n");
 					break;
 				default:
 					fsck_usage();
@@ -78,33 +81,45 @@ void f2fs_parse_options(int argc, char *argv[])
 					F2FS_TOOLS_DATE);
 		config.func = DUMP;
 		while ((option = getopt(argc, argv, option_string)) != EOF) {
+			int ret = 0;
+
 			switch (option) {
 				case 'd':
 					config.dbg_lv = atoi(optarg);
-					MSG(0, "Info: Debug level = %d\n", config.dbg_lv);
+					MSG(0, "Info: Debug level = %d\n",
+							config.dbg_lv);
 					break;
 				case 'i':
 					if (strncmp(optarg, "0x", 2))
-						sscanf(optarg, "%d", &dump_opt.nid);
+						ret = sscanf(optarg, "%d",
+								&dump_opt.nid);
 					else
-						sscanf(optarg, "%x", &dump_opt.nid);
+						ret = sscanf(optarg, "%x",
+								&dump_opt.nid);
 					break;
 				case 's':
-					sscanf(optarg, "%d~%d", &dump_opt.start_sit, &dump_opt.end_sit);
+					ret = sscanf(optarg, "%d~%d",
+								&dump_opt.start_sit,
+								&dump_opt.end_sit);
 					break;
 				case 'a':
-					sscanf(optarg, "%d~%d", &dump_opt.start_ssa, &dump_opt.end_ssa);
+					ret = sscanf(optarg, "%d~%d",
+								&dump_opt.start_ssa,
+								&dump_opt.end_ssa);
 					break;
 				case 'b':
 					if (strncmp(optarg, "0x", 2))
-						sscanf(optarg, "%d", &dump_opt.blk_addr);
+						ret = sscanf(optarg, "%d",
+								&dump_opt.blk_addr);
 					else
-						sscanf(optarg, "%x", &dump_opt.blk_addr);
+						ret = sscanf(optarg, "%x",
+								&dump_opt.blk_addr);
 					break;
 				default:
 					dump_usage();
 					break;
 			}
+			ASSERT(ret >= 0);
 		}
 
 		config.private = &dump_opt;
@@ -125,13 +140,15 @@ int do_fsck(struct f2fs_sb_info *sbi)
 	u32 blk_cnt;
 	int ret;
 
+	config.bug_on = 0;
+
 	ret = fsck_init(sbi);
 	if (ret < 0)
 		return ret;
 
 	fsck_chk_orphan_node(sbi);
 
-	/* Travses all block recursively from root inode  */
+	/* Traverse all block recursively from root inode */
 	blk_cnt = 1;
 	ret = fsck_chk_node_blk(sbi,
 			NULL,
@@ -143,7 +160,6 @@ int do_fsck(struct f2fs_sb_info *sbi)
 		goto out1;
 
 	ret = fsck_verify(sbi);
-
 out1:
 	fsck_free(sbi);
 	return ret;
@@ -180,7 +196,7 @@ cleanup:
 
 int fsck_f2fs_main (int argc, char **argv)
 {
-	struct f2fs_sb_info *sbi = &gfsck.sbi;
+	struct f2fs_sb_info *sbi;
 	int ret = 0;
 
 	f2fs_init_configuration(&config);
@@ -195,20 +211,45 @@ int fsck_f2fs_main (int argc, char **argv)
 	/* Get device */
 	if (f2fs_get_device_info(&config) < 0)
 		return -1;
+fsck_again:
+	memset(&gfsck, 0, sizeof(gfsck));
+	gfsck.sbi.fsck = &gfsck;
+	sbi = &gfsck.sbi;
 
 	if (f2fs_do_mount(sbi) < 0)
 		return -1;
 
 	switch (config.func) {
-		case FSCK:
-			ret = do_fsck(sbi);
-			break;
-		case DUMP:
-			ret = do_dump(sbi);
-			break;
+	case FSCK:
+		ret = do_fsck(sbi);
+		break;
+	case DUMP:
+		ret = do_dump(sbi);
+		break;
 	}
 
 	f2fs_do_umount(sbi);
+
+	if (config.func == FSCK && config.bug_on) {
+		if (config.fix_on == 0) {
+			char ans[255] = {0};
+retry:
+			printf("Do you want to fix this partition? [Y/N] ");
+			ret = scanf("%s", ans);
+			ASSERT(ret >= 0);
+			if (!strcasecmp(ans, "y"))
+				config.fix_cnt++;
+			else if (!strcasecmp(ans, "n"))
+				config.fix_cnt = 0;
+			else
+				goto retry;
+		} else {
+			config.fix_cnt++;
+		}
+		/* avoid infinite trials */
+		if (config.fix_cnt > 0 && config.fix_cnt < 4)
+			goto fsck_again;
+	}
 
 	f2fs_finalize_device(&config);
 
