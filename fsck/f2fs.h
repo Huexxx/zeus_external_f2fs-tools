@@ -26,7 +26,6 @@
 #include <sys/mount.h>
 #include <assert.h>
 
-#include "include/list.h"
 #include "include/f2fs_fs.h"
 #include "include/f2fs_version.h"
 
@@ -34,6 +33,10 @@
 #define ver_after(a, b) (typecheck(unsigned long long, a) &&            \
 		typecheck(unsigned long long, b) &&                     \
 		((long long)((a) - (b)) > 0))
+
+struct list_head {
+	struct list_head *next, *prev;
+};
 
 enum {
 	NAT_BITMAP,
