@@ -147,6 +147,31 @@ static void f2fs_parse_options(int argc, char *argv[])
 			* config.segs_per_sec;
 }
 
+int make_f2fs(const char *device)
+{
+	f2fs_init_configuration(&config);
+
+	config.device_name = device;
+
+	config.reserved_segments  =
+			(2 * (100 / config.overprovision + 1) + 6)
+			* config.segs_per_sec;
+	/*
+	if (f2fs_dev_is_umounted(&config) < 0)
+		return -1;
+	*/
+
+	if (f2fs_get_device_info(&config) < 0)
+		return -1;
+
+	if (f2fs_format_device() < 0)
+		return -1;
+
+	f2fs_finalize_device(&config);
+
+	return 0;
+}
+
 int make_f2fs_main(int argc, char *argv[])
 {
 	MSG(0, "\n\tF2FS-tools: mkfs.f2fs Ver: %s (%s)\n\n",

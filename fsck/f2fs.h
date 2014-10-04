@@ -221,7 +221,7 @@ static inline void *__bitmap_ptr(struct f2fs_sb_info *sbi, int flag)
 	}
 }
 
-static inline bool is_set_ckpt_flags(struct f2fs_checkpoint *cp, unsigned int f)
+static inline u8 is_set_ckpt_flags(struct f2fs_checkpoint *cp, unsigned int f)
 {
 	unsigned int ckpt_flags = le32_to_cpu(cp->ckpt_flags);
 	return ckpt_flags & f;
@@ -311,14 +311,14 @@ static inline block_t sum_blk_addr(struct f2fs_sb_info *sbi, int base, int type)
 	(segno / SIT_ENTRY_PER_BLOCK)
 #define TOTAL_SEGS(sbi) (SM_I(sbi)->main_segments)
 
-static inline bool IS_VALID_NID(struct f2fs_sb_info *sbi, u32 nid)
+static inline u8 IS_VALID_NID(struct f2fs_sb_info *sbi, u32 nid)
 {
 	return (nid <= (NAT_ENTRY_PER_BLOCK *
 			F2FS_RAW_SUPER(sbi)->segment_count_nat
 			<< (sbi->log_blocks_per_seg - 1)));
 }
 
-static inline bool IS_VALID_BLK_ADDR(struct f2fs_sb_info *sbi, u32 addr)
+static inline u8 IS_VALID_BLK_ADDR(struct f2fs_sb_info *sbi, u32 addr)
 {
 	int i;
 

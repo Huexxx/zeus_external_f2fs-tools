@@ -26,7 +26,6 @@ typedef u_int16_t	u16;
 typedef u_int8_t	u8;
 typedef u32		block_t;
 typedef u32		nid_t;
-typedef u8		bool;
 typedef unsigned long	pgoff_t;
 
 #if HAVE_BYTESWAP_H

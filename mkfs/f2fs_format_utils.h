@@ -1,5 +1,5 @@
 /**
- * f2fs_format_utils.c
+ * f2fs_format_utils.h
  *
  * Copyright (c) 2014 Samsung Electronics Co., Ltd.
  *             http://www.samsung.com/
@@ -15,3 +15,4 @@ extern struct f2fs_configuration config;
 
 int f2fs_trim_device(void);
 int f2fs_format_device(void);
+int make_f2fs(const char *device);
